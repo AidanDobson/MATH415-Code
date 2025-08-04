@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse
 import scipy.sparse.linalg as sci
-
+from scipy.optimize import fsolve
 def construct_tridiagonal(coefficients,N,h):
     upper = coefficients[0]*np.ones(N-2)
     diagonal = coefficients[1]*np.ones(N-1)
@@ -130,15 +130,71 @@ plt.show()"""
 
 #Question 3.d
 
-h_values = [0.5,0.1,0.01,0.001]
+"""h_values = [0.5,0.1,0.01,0.001]
 
 #Compute the eigenvalues of the matrix A
-"""print("\n       h              Smallest eigenvalue absolute value           matrix_norm")
+print("\n       h              Smallest eigenvalue absolute value           matrix_norm")
 for h in h_values:
-    A = construct_tridiagonal(compute_coefficients(h,1,0),int(np.pi/h),h)
+    A = scipy.sparse.csr_matrix(construct_tridiagonal(compute_coefficients(h,1,0),int(np.pi/h),h))
     
     eigenvalues = np.linalg.eig(A)[0]
     A_inverse = np.linalg.inv(A)
     inverse_norm = np.linalg.norm(A_inverse,2)
     print("%13.4e   %13.4e   %13.4e" %
               (h, min(abs(eigenvalues)),inverse_norm))"""
+
+#Question 4.
+g = 1
+L = 1
+def function(x,alpha,beta,h):
+    
+    factor = 1
+    output = x
+    output[0] = factor*(alpha - 2*x[1] + x[2]) + (g/L)*np.sin(x[1])
+    output[-1] = factor*(x[-2] - 2*x[-1] + beta) + (g/L)*np.sin(x[-1])
+    #We know the formula for each entry of the solution vector, we just don't know how long it is
+    for i in range(1,len(x)-1):
+        output[i] = factor*(x[i-1] - 2*x[i] + x[i+1]) + (g/L)*np.sin(x[i])
+    
+    return output
+
+#As an initial guess, we can use theta = 0.7 + (g/L)sin(t/4). This is to keep the angle small so that the approximation theta = sin(theta) is slightly more valid
+def solve_nonlinear_bvp(boundary1,boundary2,function,initial_cond,N):
+    a, alpha = boundary1
+    b, beta = boundary2
+    h = (b-a)/N
+    x0 = []
+    grid_points = []
+    for i in range(N+1):
+        grid_points.append(a + i*h)
+        x0.append(initial_cond(grid_points[-1]))
+    
+    solution = fsolve(function,x0,args=(alpha,beta,h),maxfev=10000*(N+1))
+    print(solution)
+    return grid_points,solution
+
+#Part A.
+"""def initial_function_1(t):
+    return 0.7+(g/L)*np.sin(t/4)
+
+points, solution = solve_nonlinear_bvp([0,0.7],[2*np.pi,0.7],function,initial_function_1,20)
+
+plt.plot(points,solution)
+plt.show()"""
+
+#Part B.
+def initial_function_2(t):
+    return 0.7*np.cos(t) + 0.5*np.sin(t)
+
+points, solution = solve_nonlinear_bvp([0,0.7],[2*np.pi,0.7],function,initial_function_2,20)
+
+plt.plot(points,solution)
+plt.show()
+
+def initial_function_3(t):
+    return 0.7 + np.sin(4*t)
+
+points, solution = solve_nonlinear_bvp([0,0.7],[2*np.pi,0.7],function,initial_function_3,20)
+
+plt.plot(points,solution)
+plt.show()
